@@ -2,20 +2,18 @@ library(shiny)
 library(shinycssloaders)
 library(shinydashboard)
 library(shinycssloaders)
-
-
+library(ggmap)
+library(ggplot2)
+#library(plotly)
 
 options(spinner.color.background="#FF0000")
-
-
-
 
 sidebar <- shinydashboard::dashboardSidebar(
 width = 180,
 hr(),
 shinydashboard::sidebarMenu(id="tabs",
 shinydashboard::menuItem("Application", tabName="mapPlot"),
-shinydashboard::menuItem("About", tabName = "about", selected=TRUE)
+shinydashboard::menuItem("Instructions", tabName = "about", selected=TRUE)
 )
 )
 
@@ -63,11 +61,21 @@ shinydashboard::tabItem(tabName = "about",
 shiny::fluidRow("Run by the Mars Society, the Mars Desert Research Station is a space analogue habitat in the deserts of Utah. Each year, crews of about seven members spend two weeks at the facility simulating a Mars mission. Part of this simulation invovles extravehicular activities (EVAs), where crew members done spacesuits and investigate the surroundings of the habitat.", style='padding:10px;'),
 shiny::fluidRow("This application is intended for crew members to overlay information obtained during their EVAs onto maps. To use this application, you simply need to have GPS coordinates saved from your EVAs. You can then simply select a .CSV file from your local computer that contains latitude and longitude measurements. The application will then plot these latitude and longitude measurements onto a map surrounding the habitat.", style='padding:10px;'),
 
-shiny::fluidRow("Specifically, the CSV file must contain a minimum of three .", style='padding:10px;'))))
+shiny::fluidRow("Specifically, the CSV file must contain at least three columns with headings called 'ID', 'Latitude', and 'Longitude'. An example of this format is shown in Figure 1. The ID column indicates the order in which you recorded latitude and longitude measurements during your EVA. Reading this .CSV file into the application will produce a map with these six measurements superimposed as shown in Figure 2.", style='padding:10px;'),
 
+br(),
+br(),
+div(p('Figure 1'), style="text-align: center;"),
+div(img(src='Figure1.png', style="width: 100%"), style="text-align: center;"),
+br(),
+br(),
 
+div(p('Figure 2'), style="text-align: center;"),
+div(img(src='Figure2.png', style="width: 70%"), style="text-align: center;"),
+br(),
+br()
 
-
+)))
 
 
 
@@ -106,7 +114,7 @@ register_google(key = "AIzaSyCcJu4DttxEDccaixZomOCXcUhptYHX2n4")
 island = get_map(location = c(lon = -110.7919, lat = 38.4065), zoom = 13, maptype = "satellite")
 
 p <- ggmap(island, extent = "panel", legend = "bottomright") +
-    geom_point(aes(x = Longitude, y = Latitude), data = df, size = 4, color = "#ff0000")
+    geom_point(aes(x = Longitude, y = Latitude), data = df, size = 4, color = "#ff0000") + xlab("Longitude") + ylab("Latitude")
 #+ scale_x_continuous(limits = c(minLon, maxLon), expand = c(0, 0)) +
 #scale_y_continuous(limits = c(minLat, maxLat), expand = c(0, 0))
 

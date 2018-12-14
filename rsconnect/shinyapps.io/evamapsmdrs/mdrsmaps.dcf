@@ -1,0 +1,10 @@
+name: mdrsmaps
+title:
+username:
+account: evamapsmdrs
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 616874
+bundleId: 1763493
+url: https://evamapsmdrs.shinyapps.io/mdrsmaps/
+when: 1544803192.69229
