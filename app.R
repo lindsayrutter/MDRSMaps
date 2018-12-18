@@ -56,6 +56,8 @@ shiny::fluidRow("This application is intended for crew members to overlay inform
 
 shiny::fluidRow("Specifically, the CSV file must contain at least three columns with headings called 'ID', 'Latitude', and 'Longitude'. An example of this format is shown in Figure 1. The ID column indicates the order in which you recorded latitude and longitude measurements during your EVA. Reading this .CSV file into the application will produce a map with these six measurements superimposed as shown in Figure 2.", style='padding:10px;'),
 
+#Need internet connection
+
 br(),
 br(),
 div(p('Figure 1'), style="text-align: center;"),
@@ -98,16 +100,43 @@ output$plotMap <- renderPlot({
 df <-filedata()
 if (is.null(df)) return(NULL)
 
+#df <- read_csv(file = "case2.csv") # comment out eventually
 df <- as.data.frame(df)
 df <- df[,1:ncol(df)]
-df <- setNames(df, c("ID", "Latitude", "Longitude"))
 
 register_google(key = "AIzaSyCcJu4DttxEDccaixZomOCXcUhptYHX2n4")
 # Center on MDRS
-bbox <- ggmap::make_bbox(lon=Longitude, lat=Latitude, data, f = 0.05)
+bbox <- ggmap::make_bbox(lon=Longitude, lat=Latitude, data=df, f = 0.05)
 mapLoc <- get_map(location = bbox, zoom = 13, maptype = "satellite")
 
-p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = lon, y = lat), data=data) + geom_point(aes(x = lon, y = lat, size = size, color = color), data = data) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+if (ncol(df) == 2){
+    df$size = 2
+    df$color = as.factor("blue")
+
+    p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df) + geom_point(aes(x = Longitude, y = Latitude, size = size, color = color), data = df) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+}
+
+else if (ncol(df) == 3){
+    classCol = class(df[,3])
+    # If only color is defined
+    if (classCol %in% c("factor", "character")){
+        df$size = 2
+        p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[4], color = colnames(df)[3]), data = df) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+    }
+    # If only size is defined
+    else if (classCol %in% c("integer", "numeric")){
+        df$color = "blue"
+        p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[3], color = colnames(df)[4]), data = df) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+    }    
+}
+
+else if (ncol(df) == 4){
+    colNms = sapply(df[,3:4], class)
+    colCol = which(colNms %in% c("factor", "character"))+2
+    sizeCol = which(colNms %in% c("integer", "numeric"))+2
+    
+    p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[sizeCol], color = colnames(df)[colCol]), data = df) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+}
 
 return(p)
 
