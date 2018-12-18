@@ -41,14 +41,16 @@ fluidRow(
 column(width = 4, 
 
 shinydashboard::box(width = NULL, status = "primary", title = "Plot metrics", solidHeader = TRUE,
-# shiny::selectizeInput("selPair", "Treatment pairs:", choices = myPairs, multiple = TRUE, options = list(maxItems = 2)),
-# shiny::selectInput("selOrder", "Metric order:", choices = c("Increasing", "Decreasing")),
-# shiny::numericInput("binSize", "Hexagon size:", value = 10, min = 1),
 fileInput('datafile', 'Choose CSV File',
-accept=c('text/csv', 'text/comma-separated-values,text/plain', '.csv')))),
+accept=c('text/csv', 'text/comma-separated-values,text/plain', '.csv')),
+
+numericInput("zoom", "Zoom", 13, min = 3, max = 21, step = 1),
+numericInput("alpha", "Alpha", 1, min = 0, max = 1, step = 0.1),
+textInput("lineColor", "Line color", value = "black")
+)),
 
 column(width = 8,
-shinydashboard::box(width = NULL, shinycssloaders::withSpinner(plotOutput("plotMap"), color = "#990000"), collapsible = FALSE, background = "black", title = "MDRS map with overlaid coordinates", status = "primary", solidHeader = TRUE)))),
+shinydashboard::box(width = NULL, shinycssloaders::withSpinner(plotlyOutput("plotlyMap"), color = "#990000"), collapsible = FALSE, background = "black", title = "MDRS map with overlaid coordinates", status = "primary", solidHeader = TRUE)))),
 
 shinydashboard::tabItem(tabName = "about",
 shiny::fluidRow("Run by the Mars Society, the Mars Desert Research Station is a space analogue habitat in the deserts of Utah. Each year, crews of about seven members spend two weeks at the facility simulating a Mars mission. Part of this simulation invovles extravehicular activities (EVAs), where crew members done spacesuits and investigate the surroundings of the habitat.", style='padding:10px;'),
@@ -94,52 +96,56 @@ return(NULL)
 read.csv(infile$datapath)
 })
 
-
-output$plotMap <- renderPlot({
-
-df <-filedata()
-if (is.null(df)) return(NULL)
-
-#df <- read_csv(file = "case2.csv") # comment out eventually
-df <- as.data.frame(df)
-df <- df[,1:ncol(df)]
-
-register_google(key = "AIzaSyCcJu4DttxEDccaixZomOCXcUhptYHX2n4")
-# Center on MDRS
-bbox <- ggmap::make_bbox(lon=Longitude, lat=Latitude, data=df, f = 0.05)
-mapLoc <- get_map(location = bbox, zoom = 13, maptype = "satellite")
-
-if (ncol(df) == 2){
-    df$size = 2
-    df$color = as.factor("blue")
-
-    p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df) + geom_point(aes(x = Longitude, y = Latitude, size = size, color = color), data = df) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
-}
-
-else if (ncol(df) == 3){
-    classCol = class(df[,3])
-    # If only color is defined
-    if (classCol %in% c("factor", "character")){
-        df$size = 2
-        p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[4], color = colnames(df)[3]), data = df) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
-    }
-    # If only size is defined
-    else if (classCol %in% c("integer", "numeric")){
-        df$color = "blue"
-        p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[3], color = colnames(df)[4]), data = df) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
-    }    
-}
-
-else if (ncol(df) == 4){
-    colNms = sapply(df[,3:4], class)
-    colCol = which(colNms %in% c("factor", "character"))+2
-    sizeCol = which(colNms %in% c("integer", "numeric"))+2
+p <- eventReactive({c(filedata(), input$zoom, input$alpha, input$lineColor)}, {
+    df <-filedata()
+    if (is.null(df)) return(NULL)
     
-    p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[sizeCol], color = colnames(df)[colCol]), data = df) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+    #df <- read_csv(file = "case2.csv") # comment out eventually
+    df <- as.data.frame(df)
+    df <- df[,1:ncol(df)]
+    
+    register_google(key = "AIzaSyCcJu4DttxEDccaixZomOCXcUhptYHX2n4")
+    # Center on MDRS
+    bbox <- ggmap::make_bbox(lon=Longitude, lat=Latitude, data=df, f = 0.05)
+    mapLoc <- get_map(location = bbox, zoom = input$zoom, maptype = "satellite")
+    
+    if (ncol(df) == 2){
+        df$size = 2
+        df$color = as.factor("blue")
+        
+        p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df, color=input$lineColor) + geom_point(aes(x = Longitude, y = Latitude, size = size, color = color), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+    }
+    
+    else if (ncol(df) == 3){
+        classCol = class(df[,3])
+        # If only color is defined
+        if (classCol %in% c("factor", "character")){
+            df$size = 2
+            p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df, color=input$lineColor) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[4], color = colnames(df)[3]), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+        }
+        # If only size is defined
+        else if (classCol %in% c("integer", "numeric")){
+            df$color = "blue"
+            p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df, color=input$lineColor) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[3], color = colnames(df)[4]), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+        }    
+    }
+    
+    else if (ncol(df) == 4){
+        colNms = sapply(df[,3:4], class)
+        colCol = which(colNms %in% c("factor", "character"))+2
+        sizeCol = which(colNms %in% c("integer", "numeric"))+2
+        
+        p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df, color = input$lineColor) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[sizeCol], color = colnames(df)[colCol]), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+    }
+    
+    return(p)
+})
+
+output$plotlyMap <- renderPlotly({
+    gp <- ggplotly(p())
+    return(gp)
+})
+
 }
-
-return(p)
-
-})}
 
 shiny::shinyApp(ui = ui, server = server)
