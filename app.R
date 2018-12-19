@@ -66,21 +66,72 @@ shiny::fluidRow("Run by the Mars Society, the", a("Mars Desert Research Station"
 
 shiny::fluidRow('The current application can be accessed from the tab on the left called "Application". It is intended for crew members to overlay information obtained during their EVAs onto maps. To use this application, you simply need to create a .CSV file that contains latitude and longitude measurements from your EVA and upload it into the application. The application will then plot these latitude and longitude measurements onto a map surrounding the habitat.', style='padding-right: 30px;', style='padding-left: 30px;', style='padding-bottom:15px;'),
 
-shiny::fluidRow("Specifically, the CSV file must contain at least three columns with headings called 'ID', 'Latitude', and 'Longitude'. An example of this format is shown in Figure 1. The ID column indicates the order in which you recorded latitude and longitude measurements during your EVA. Reading this .CSV file into the application will produce a map with these six measurements superimposed as shown in Figure 2.", style='padding-right: 30px;', style='padding-left: 30px;'),
+shiny::fluidRow("Specifically, the CSV file must contain at least two columns with headings called 'Latitude' and 'Longitude'. An example of the first six lines of this format is shown in File 1. Reading this .CSV file into the application will produce a map with these measurements superimposed as shown in Figure 1.", style='padding-right: 30px;', style='padding-left: 30px;'),
 
-#Need internet connection
-a("here.", href="https://github.com/lrutter/MDRSMaps/tree/master/files/"),
 br(),
 br(),
-div(p('Figure 1'), style="text-align: center;"),
+div(p('File 1'), style="text-align: center;"),
 div(img(src='Figure1.png', style="width: 100%"), style="text-align: center;"),
 br(),
 br(),
 
-div(p('Figure 2'), style="text-align: center;"),
-div(img(src='Figure2.png', style="width: 70%"), style="text-align: center;"),
+div(p('Figure 1'), style="text-align: center;"),
+div(img(src='Figure2.png', style="width: 60%"), style="text-align: center;"),
 br(),
-br()
+br(),
+
+shiny::fluidRow("You can also add one more quantitative variable (to be mapped to size) and/or one more qualitative variable (to be mapped to color). An example of this format is shown in File 2. These are simulated measurements where crewmembers recorded", a("radio signal scores", href="https://en.wikipedia.org/wiki/QSA_and_QRK_radio_signal_reports/"), "at six locations around the habitat. Here, they will link the QSA values (radio strength) as colors and the QRK values (radio intelligibility) as sizes. The result of uploading this file is shown in Figure 2.", style='padding-right: 30px;', style='padding-left: 30px;'),
+
+br(),
+br(),
+div(p('File 2'), style="text-align: center;"),
+div(img(src='Figure3.png', style="width: 100%"), style="text-align: center;"),
+br(),
+br(),
+
+div(p('Figure 2'), style="text-align: center;"),
+div(img(src='Figure4.png', style="width: 60%"), style="text-align: center;"),
+br(),
+br(),
+
+shiny::fluidRow("Another example of this format is shown in File 3 (where only the quantitative field is given for point sizes) and the application will keep all points a default color, resulting in the map shown in Figure 3.", style='padding-right: 30px;', style='padding-left: 30px;'),
+
+br(),
+br(),
+div(p('File 3'), style="text-align: center;"),
+div(img(src='Figure5.png', style="width: 100%"), style="text-align: center;"),
+br(),
+br(),
+
+div(p('Figure 3'), style="text-align: center;"),
+div(img(src='Figure6.png', style="width: 60%"), style="text-align: center;"),
+br(),
+br(),
+
+shiny::fluidRow("And one last example of this format is shown in File 4 (where only the qualitative field is given for point colors) and the application will keep all points a default size, resulting in the map shown in Figure 4.", style='padding-right: 30px;', style='padding-left: 30px;'),
+
+br(),
+br(),
+div(p('File 4'), style="text-align: center;"),
+div(img(src='Figure7.png', style="width: 100%"), style="text-align: center;"),
+br(),
+br(),
+
+div(p('Figure 4'), style="text-align: center;"),
+div(img(src='Figure8.png', style="width: 60%"), style="text-align: center;"),
+br(),
+br(),
+
+shiny::fluidRow("You can download any of the above four example .CSV files at ", a("radio signal scores", href="https://github.com/lrutter/MDRSMaps/tree/master/files"), '. Or, create your own CSV file from your EVA and upload it to the application by clicking on the "Application" tab to the left!', style='padding-right: 30px;', style='padding-left: 30px;'),
+
+br(),
+br(),
+
+shiny::fluidRow(strong("Note 1:"), "Please report errors", a("here", href="https://github.com/lrutter/MDRSMaps/issues"), ".", style='padding-right: 30px;', style='padding-left: 30px;'),
+
+shiny::fluidRow(strong("Note 2:"), "For color definitions, you can use hexadecimal colors or color names from the list below:", style='padding-right: 30px;', style='padding-left: 30px;', style='padding-bottom: 15px;'),
+
+div(img(src='Figure9.png', style="width: 100%"), style="text-align: center;")
 
 )))
 
@@ -103,7 +154,7 @@ return(NULL)
 read.csv(infile$datapath)
 })
 
-p <- eventReactive({c(filedata(), input$zoom, input$alpha, input$lineColor, input$mapType)}, {
+p <- eventReactive({c(filedata(), input$zoom, input$alpha, input$line, input$lineColor, input$mapType)}, {
 
 df <-filedata()
 if (is.null(df)) return(NULL)
@@ -117,23 +168,27 @@ bbox <- ggmap::make_bbox(lon=Longitude, lat=Latitude, data=df, f = 0.05)
 mapLoc <- get_map(location = bbox, zoom = input$zoom, maptype = input$mapType)
 
 if (ncol(df) == 2){
-df$size = 2
+df$size = 1
 df$color = as.factor("blue")
 
-p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df, color=input$lineColor) + geom_point(aes(x = Longitude, y = Latitude, size = size, color = color), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_point(aes(x = Longitude, y = Latitude, size = size, color = color), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+
+if (input$line == "Yes"){p <- p + geom_line(aes(x = Longitude, y = Latitude), data=df, color=input$lineColor)}
 }
 
 else if (ncol(df) == 3){
 classCol = class(df[,3])
 # If only color is defined
 if (classCol %in% c("factor", "character")){
-df$size = 2
-p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df, color=input$lineColor) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[4], color = colnames(df)[3]), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+df$size = 1
+p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[4], color = colnames(df)[3]), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+if (input$line == "Yes"){p <- p + geom_line(aes(x = Longitude, y = Latitude), data=df, color=input$lineColor)}
 }
 # If only size is defined
 else if (classCol %in% c("integer", "numeric")){
 df$color = "blue"
-p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df, color=input$lineColor) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[3], color = colnames(df)[4]), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[3], color = colnames(df)[4]), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+if (input$line == "Yes"){p <- p + geom_line(aes(x = Longitude, y = Latitude), data=df, color=input$lineColor)}
 }    
 }
 
@@ -142,7 +197,8 @@ colNms = sapply(df[,3:4], class)
 colCol = which(colNms %in% c("factor", "character"))+2
 sizeCol = which(colNms %in% c("integer", "numeric"))+2
 
-p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df, color = input$lineColor) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[sizeCol], color = colnames(df)[colCol]), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[sizeCol], color = colnames(df)[colCol]), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
+if (input$line == "Yes"){p <- p + geom_line(aes(x = Longitude, y = Latitude), data=df, color=input$lineColor)}
 }
 
 return(p)
@@ -150,6 +206,45 @@ return(p)
 
 output$plotlyMap <- renderPlotly({
 gp <- ggplotly(p())
+
+df <-filedata()
+if (is.null(df)) return(NULL)
+
+if (ncol(df) == 2){
+    for (i in 1:length(gp$x$data[[3]]$text)){
+    inputString <- gp$x$data[[3]]$text[i]
+    rem1 = unlist(strsplit(inputString, "<br />size:"))[1]
+    rem2 = unlist(strsplit(rem1, "<br />color:"))[1]
+    gp$x$data[[3]]$text[i] <- rem2
+    }
+}
+
+else if (ncol(df) == 3){
+    for (i in 1:length(gp$x$data)){
+        for (j in 1:length(gp$x$data[[i]]$text)){
+            inputString <- gp$x$data[[i]]$text[j]
+            if(!is.null(inputString)){
+                rem1 = unlist(strsplit(inputString, "<br />lon:"))[1]
+                rem2 = unlist(strsplit(rem1, "<br />lat:"))[1]
+                gp$x$data[[i]]$text[j] <- rem2
+            }
+        }
+    }
+}
+
+else if (ncol(df) == 4){
+    for (i in 1:length(gp$x$data)){
+        for (j in 1:length(gp$x$data[[i]]$text)){
+            inputString <- gp$x$data[[i]]$text[j]
+            if(!is.null(inputString)){
+                rem1 = unlist(strsplit(inputString, "<br />lon:"))[1]
+                rem2 = unlist(strsplit(rem1, "<br />lat:"))[1]
+                gp$x$data[[i]]$text[j] <- rem2
+            }
+        }
+    }
+}
+
 return(gp)
 })
 
