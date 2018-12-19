@@ -4,7 +4,9 @@ library(shinydashboard)
 library(shinycssloaders)
 library(ggmap)
 library(ggplot2)
-#library(plotly)
+library(plotly)
+library(bsplus)
+library("htmltools")
 
 options(spinner.color.background="#FF0000")
 
@@ -21,7 +23,6 @@ body <- shinydashboard::dashboardBody(
 shinydashboard::tabItems(
 shinydashboard::tabItem(tabName = "mapPlot",
 
-
 tags$style(HTML("
 .box.box-solid.box-primary>.box-header {
 color:#fff;
@@ -36,7 +37,6 @@ background:#D3D3D3
 }
 ")),
 
-
 fluidRow(
 column(width = 4, 
 
@@ -44,10 +44,20 @@ shinydashboard::box(width = NULL, status = "primary", title = "Plot metrics", so
 fileInput('datafile', 'Choose CSV File',
 accept=c('text/csv', 'text/comma-separated-values,text/plain', '.csv')),
 
-numericInput("zoom", "Zoom", 13, min = 3, max = 21, step = 1),
-numericInput("alpha", "Alpha", 1, min = 0, max = 1, step = 0.1),
-textInput("lineColor", "Line color", value = "black")
-)),
+"Test words here",
+
+use_bs_tooltip(),
+
+numericInput("zoom", "Zoom", 13, min = 3, max = 21, step = 1) %>% shinyInput_label_embed(shiny_iconlink() %>% bs_embed_tooltip( title = "Set the zoom parameter to an integer between 3 and 21 inclusive. Small values zoom out, large values zoom in. Note: If you zoom in too much, you might lose the overlaid points.", placement = "left")),
+
+numericInput("alpha", "Alpha", 1, min = 0, max = 1, step = 0.1) %>% shinyInput_label_embed(shiny_iconlink() %>% bs_embed_tooltip( title = "Set the alpha parameter to values between 0 and 1 inclusive. The alpha parameter designates the transparency of overlaid points. With an alpha value of 1, the points are entirely opaque; with an alpha value of 0, the points are invisible (you will only see the line connecting now-invisible points).", placement = "left")),
+
+radioButtons("line", "Line?", choices = c("No", "Yes")),
+
+conditionalPanel(
+    condition = "input.line == 'Yes'",
+    textInput("lineColor", "Line color", value = "black")  %>% shinyInput_label_embed(shiny_iconlink() %>% bs_embed_tooltip( title = "A line will be drawn connecting the overlaid points in the order they appear in the read-in document. Choose the color for this line.", placement = "left"))
+))),
 
 column(width = 8,
 shinydashboard::box(width = NULL, shinycssloaders::withSpinner(plotlyOutput("plotlyMap"), color = "#990000"), collapsible = FALSE, background = "black", title = "MDRS map with overlaid coordinates", status = "primary", solidHeader = TRUE)))),
@@ -74,9 +84,6 @@ br()
 
 )))
 
-
-
-
 ui <- shinydashboard::dashboardPage(skin = "red",
 shinydashboard::dashboardHeader(title = "MDRS Map", titleWidth = 180),
 sidebar,
@@ -97,10 +104,10 @@ read.csv(infile$datapath)
 })
 
 p <- eventReactive({c(filedata(), input$zoom, input$alpha, input$lineColor)}, {
+
     df <-filedata()
     if (is.null(df)) return(NULL)
     
-    #df <- read_csv(file = "case2.csv") # comment out eventually
     df <- as.data.frame(df)
     df <- df[,1:ncol(df)]
     
@@ -137,7 +144,7 @@ p <- eventReactive({c(filedata(), input$zoom, input$alpha, input$lineColor)}, {
         
         p <- ggmap(mapLoc, extent = "panel", legend = "bottomright") + geom_line(aes(x = Longitude, y = Latitude), data=df, color = input$lineColor) + geom_point(aes_string(x = colnames(df)[2], y = colnames(df)[1], size = colnames(df)[sizeCol], color = colnames(df)[colCol]), data = df, alpha = input$alpha) + scale_color_identity() + theme(legend.position="none") + xlab("Longitude") + ylab("Latitude") + scale_size_identity()
     }
-    
+
     return(p)
 })
 
